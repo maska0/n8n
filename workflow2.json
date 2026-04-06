@@ -1,0 +1,723 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "is-voice",
+              "leftValue": "={{ $json.message.voice.file_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1232,
+        2128
+      ],
+      "id": "cd53da90-83dc-4136-9ff9-0330d6ea4f26",
+      "name": "Это голосовое?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mock-recognizer:8080/parse",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Correlation-Id",
+              "value": "={{ $json.message.message_id }}-{{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "audio",
+              "value": "={{ $json.data }}"
+            },
+            {
+              "name": "correlation_id",
+              "value": "={{ $json.message.message_id }}-{{ $json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -560,
+        2352
+      ],
+      "id": "96359aa7-eed5-4f3d-816f-76ee1b9be781",
+      "name": "Вызов модуля распознавания (заглушка)"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "status-ready",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "ready",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ready"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "status-clarify",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "needs_clarification",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "clarify"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "status-error",
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "error",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "error"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -352,
+        2176
+      ],
+      "id": "45d66fb7-965e-4d65-9a19-490529b5012f",
+      "name": "Статус распознавания"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "correlation_id",
+              "name": "correlation_id",
+              "value": "={{ $json.message.message_id }}-{{ $json.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "title",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "description",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "deadline",
+              "name": "deadline",
+              "value": "={{ $json.deadline_iso }}",
+              "type": "string"
+            },
+            {
+              "id": "responsible",
+              "name": "responsible",
+              "value": "={{ $json.responsible_name }}",
+              "type": "string"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "value": "ready",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        2000
+      ],
+      "id": "2011a5d9-4885-4c0a-afd7-9397dcef8746",
+      "name": "Подготовка черновика"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger1\"].json.message.chat.id }}",
+        "text": "={{ $json.clarification_questions[0] || 'Уточните, пожалуйста, недостающие данные' }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        2144
+      ],
+      "id": "280e0d46-0988-4a6e-ad82-3c640e425d19",
+      "name": "Запрос уточнения",
+      "webhookId": "9b5514db-cf0c-415c-bfe9-2703b73193ac",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger1\"].json.message.chat.id }}",
+        "text": "⚠️ Ошибка при обработке голосового сообщения. Попробуйте ещё раз.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        2352
+      ],
+      "id": "41e8803d-d2c6-4431-adaf-8f5a42e08c8d",
+      "name": "Отправить ошибку",
+      "webhookId": "dc984391-32ea-4304-94a3-b8e077856669",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "btn-confirm",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "confirm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "confirm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "btn-cancel",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "btn-clarify",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "clarify",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "clarify"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        1968
+      ],
+      "id": "3e281627-5a4c-4531-8620-22927f7cc258",
+      "name": "Обработка кнопок"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://вашпортал.bitrix24.ru/rest/1/токен/crm.task.add",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "={ \"TITLE\": \"{{ $json.title }}\", \"DESCRIPTION\": \"{{ $json.description }}\", \"DEADLINE\": \"{{ $json.deadline }}\", \"RESPONSIBLE_ID\": {{ $json.responsible_id }} }"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        1776
+      ],
+      "id": "948a6e56-c1ac-4382-9fcb-444c6b0a44d0",
+      "name": "Создать задачу в Bitrix24"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✅ Задача №{{ $json.result.task_id }} создана!\nСсылка: {{ $json.result.task_url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        848,
+        1888
+      ],
+      "id": "d19ec588-f2d3-45f0-a90d-afe9452e35fe",
+      "name": "Успех: задача создана",
+      "webhookId": "2117218f-062f-4b7f-8e09-630c1d51996b",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "❌ Задача отменена.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        1936
+      ],
+      "id": "6a683b8d-e7c7-4e33-aec9-ba5889931b14",
+      "name": "Отмена",
+      "webhookId": "e5f76ee7-9ceb-4adb-877f-59d2f60c8dc1",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.callback_query.message.chat.id }}",
+        "text": "✏️ Напишите текстом, что именно уточнить (название/описание/срок/ответственный)",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        2096
+      ],
+      "id": "63cfb9a3-4b2c-4b5a-94a7-3d57d22e134b",
+      "name": "Уточнение",
+      "webhookId": "3cf0473d-663e-41ef-bdd9-7a5f39cb7dd9",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1472,
+        2128
+      ],
+      "id": "9a4c7c81-648e-4fe9-9438-29213cb48201",
+      "name": "Telegram Trigger1",
+      "webhookId": "voice-to-bitrix",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot8580358785:AAFSRgvm7ZGobysInzljhU9PFYsYL9eZ1_M/getFile?file_id={{ $json.message.voice.file_id }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1008,
+        2128
+      ],
+      "id": "bb24ad8e-567f-46cf-b9fa-e06efe6e5fce",
+      "name": "Получить путь файла1"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/bot8580358785:AAFSRgvm7ZGobysInzljhU9PFYsYL9eZ1_M/{{ $json.result.file_path }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -784,
+        2192
+      ],
+      "id": "edec635b-e5ef-4383-ba34-32d23bca5fd6",
+      "name": "Скачать аудиофайл1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger1\"].json.message.chat.id }}",
+        "text": "📋 *Черновик задачи*\n\n*Название:* {{ $json.title }}\n*Описание:* {{ $json.description }}\n*Срок:* {{ $json.deadline }}\n*Ответственный:* {{ $json.responsible }}\n\nПодтверждаете создание?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Подтвердить",
+                    "additionalFields": {
+                      "callback_data": "confirm"
+                    }
+                  },
+                  {
+                    "text": "❌ Отменить",
+                    "additionalFields": {
+                      "callback_data": "cancel"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✏️ Уточнить",
+                    "additionalFields": {
+                      "callback_data": "clarify"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        2000
+      ],
+      "id": "3df35d8b-2631-4541-be8b-52b607fb4fc5",
+      "name": "Отправить черновик1",
+      "webhookId": "58eb2fbf-e82b-4dc8-be2d-e20f0ba0dfe5",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger1\"].json.message.chat.id }}",
+        "text": "🎤 Пожалуйста, отправьте голосовое сообщение с задачей.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1008,
+        2384
+      ],
+      "id": "8e769dc7-6b17-4c2b-b9e4-fc149fcc3b15",
+      "name": "Запрос голосового1",
+      "webhookId": "48156373-123b-466a-a96d-b13927ac4326",
+      "credentials": {
+        "telegramApi": {
+          "id": "ZGgKtavZDt8nLGBu",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Это голосовое?": {
+      "main": [
+        [
+          {
+            "node": "Получить путь файла1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Запрос голосового1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Статус распознавания": {
+      "main": [
+        [
+          {
+            "node": "Подготовка черновика",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Запрос уточнения",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Отправить ошибку",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Подготовка черновика": {
+      "main": [
+        [
+          {
+            "node": "Отправить черновик1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Обработка кнопок": {
+      "main": [
+        [
+          {
+            "node": "Создать задачу в Bitrix24",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Отмена",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Уточнение",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Создать задачу в Bitrix24": {
+      "main": [
+        [
+          {
+            "node": "Успех: задача создана",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Это голосовое?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Получить путь файла1": {
+      "main": [
+        [
+          {
+            "node": "Скачать аудиофайл1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Скачать аудиофайл1": {
+      "main": [
+        [
+          {
+            "node": "Статус распознавания",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Отправить черновик1": {
+      "main": [
+        [
+          {
+            "node": "Обработка кнопок",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2c6aa0dc7155fa9b1f756ee018a738711bbbfec91ed509bfc1b6e6f5e51996b0"
+  }
+}
